@@ -1,0 +1,284 @@
+.dashboard-page {
+    padding: var(--space-2xl) 0 var(--space-4xl);
+}
+
+/* Header */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-2xl);
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.dashboard-header h1 {
+    font-size: 2rem;
+}
+
+.dashboard-subtitle {
+    color: var(--text-secondary);
+    font-size: 1.0625rem;
+    margin-top: 0.25rem;
+}
+
+/* Stats Row */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-md);
+    margin-bottom: var(--space-2xl);
+}
+
+.stat-card {
+    text-align: center;
+    padding: var(--space-lg);
+}
+
+.stat-icon {
+    font-size: 1.75rem;
+    margin-bottom: var(--space-sm);
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+}
+
+.stat-label {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+}
+
+.dashboard-grid h3 {
+    font-size: 1.125rem;
+    margin-bottom: var(--space-md);
+}
+
+/* Progress Card */
+.progress-card {
+    grid-row: span 2;
+}
+
+.progress-chart {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xl);
+}
+
+.progress-ring-container {
+    position: relative;
+    width: 160px;
+    height: 160px;
+}
+
+.progress-ring-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.progress-ring-bg {
+    fill: none;
+    stroke: var(--bg-elevated);
+    stroke-width: 10;
+}
+
+.progress-ring-fill {
+    fill: none;
+    stroke: var(--indigo-400);
+    stroke-width: 10;
+    stroke-linecap: round;
+}
+
+.progress-ring-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.progress-ring-pct {
+    display: block;
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.progress-ring-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.progress-breakdown {
+    width: 100%;
+}
+
+.breakdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: 0.5rem 0;
+}
+
+.breakdown-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.breakdown-dot.mastered {
+    background: var(--success-500);
+}
+
+.breakdown-dot.in-progress {
+    background: var(--warning-500);
+}
+
+.breakdown-dot.locked {
+    background: var(--gray-600);
+}
+
+.breakdown-label {
+    flex: 1;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.breakdown-value {
+    font-weight: 700;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+}
+
+/* Next Up */
+.next-up-desc {
+    font-size: 0.875rem;
+    margin-bottom: var(--space-md);
+}
+
+.next-skills {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.next-skill-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: 0.75rem var(--space-md);
+    border-radius: var(--radius-md);
+    background: rgba(99, 102, 241, 0.05);
+    border: 1px solid var(--border-subtle);
+}
+
+.next-skill-status {
+    flex-shrink: 0;
+}
+
+.pulse-dot {
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--warning-400);
+    animation: pulse-glow 2s infinite;
+    box-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+}
+
+.next-skill-info {
+    flex: 1;
+}
+
+.next-skill-name {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9375rem;
+}
+
+.next-skill-grade {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* Milestones */
+.milestone-item {
+    display: flex;
+    gap: var(--space-md);
+    padding: var(--space-md) 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.milestone-item:last-of-type {
+    border-bottom: none;
+}
+
+.milestone-icon {
+    font-size: 1.75rem;
+    flex-shrink: 0;
+}
+
+.milestone-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.milestone-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-sm);
+}
+
+.milestone-title {
+    font-weight: 600;
+    font-size: 0.9375rem;
+}
+
+.milestone-reward {
+    font-size: 0.75rem;
+    color: var(--warning-400);
+    white-space: nowrap;
+}
+
+.milestone-desc {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    margin-top: 0.125rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .progress-card {
+        grid-row: auto;
+    }
+
+    .dashboard-header h1 {
+        font-size: 1.5rem;
+    }
+}

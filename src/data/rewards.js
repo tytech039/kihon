@@ -1,0 +1,122 @@
+// Reward definitions for the Kihon reward system
+
+export const milestones = [
+    {
+        id: 'first-drill',
+        title: 'First Steps',
+        description: 'Complete your first 7-minute drill',
+        icon: '🎯',
+        creditsRequired: 0,
+        conceptsRequired: 0,
+        drillsRequired: 1,
+        reward: '10 Gold Credits',
+    },
+    {
+        id: 'streak-3',
+        title: 'Getting Warmed Up',
+        description: 'Complete 3 drills in a row',
+        icon: '🔥',
+        creditsRequired: 0,
+        conceptsRequired: 0,
+        drillsRequired: 3,
+        reward: '25 Gold Credits',
+    },
+    {
+        id: 'master-5',
+        title: 'Foundation Builder',
+        description: 'Master 5 concepts',
+        icon: '🧱',
+        creditsRequired: 0,
+        conceptsRequired: 5,
+        drillsRequired: 0,
+        reward: 'Kihon Sticker Pack',
+    },
+    {
+        id: 'master-10',
+        title: 'Knowledge Climber',
+        description: 'Master 10 concepts',
+        icon: '🧗',
+        creditsRequired: 0,
+        conceptsRequired: 10,
+        drillsRequired: 0,
+        reward: '1 Month Free Subscription',
+    },
+    {
+        id: 'grade-level',
+        title: 'Grade Level Hero',
+        description: 'Reach your grade level in any subject',
+        icon: '🏆',
+        creditsRequired: 0,
+        conceptsRequired: 0,
+        drillsRequired: 0,
+        reward: 'Kihon Backpack',
+        special: true,
+    },
+];
+
+export const rewardShop = [
+    {
+        id: 'sticker-pack',
+        title: 'Sticker Pack',
+        description: 'A set of Kihon math stickers',
+        icon: '✨',
+        cost: 50,
+        category: 'physical',
+    },
+    {
+        id: 'notebook',
+        title: 'Kihon Notebook',
+        description: 'Premium notebook with graph paper',
+        icon: '📓',
+        cost: 150,
+        category: 'physical',
+    },
+    {
+        id: 'backpack',
+        title: 'Kihon Backpack',
+        description: 'Show everyone you mastered the basics',
+        icon: '🎒',
+        cost: 500,
+        category: 'physical',
+    },
+    {
+        id: 'sub-1mo',
+        title: '1 Month Free',
+        description: 'One month of Kihon Standard — earned by you',
+        icon: '🗓️',
+        cost: 200,
+        category: 'subscription',
+    },
+    {
+        id: 'sub-3mo',
+        title: '3 Months Free',
+        description: 'Three months of Kihon Standard',
+        icon: '📅',
+        cost: 500,
+        category: 'subscription',
+    },
+    {
+        id: 'game-30',
+        title: '30 Min Game Time',
+        description: 'Play your favorite games after practice',
+        icon: '🎮',
+        cost: 30,
+        category: 'digital',
+    },
+    {
+        id: 'game-60',
+        title: '60 Min Game Time',
+        description: 'An hour of well-earned fun',
+        icon: '🕹️',
+        cost: 50,
+        category: 'digital',
+    },
+];
+
+// Demo state
+export const demoRewardState = {
+    credits: 175,
+    conceptsMastered: 8,
+    drillsCompleted: 12,
+    milestonesEarned: ['first-drill', 'streak-3', 'master-5'],
+};

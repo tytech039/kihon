@@ -1,0 +1,272 @@
+.rewards-page {
+    padding: var(--space-2xl) 0 var(--space-4xl);
+}
+
+/* Header */
+.rewards-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xl);
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.rewards-header h1 {
+    font-size: 2rem;
+    margin-bottom: 0.25rem;
+}
+
+.rewards-header>p {
+    font-size: 1rem;
+}
+
+.credits-display {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-radius: var(--radius-lg);
+}
+
+.credits-display-icon {
+    font-size: 2rem;
+}
+
+.credits-display-amount {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 800;
+    font-family: var(--font-mono);
+    color: var(--warning-400);
+}
+
+.credits-display-label {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* Tabs */
+.rewards-tabs {
+    display: flex;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-xl);
+    padding: 4px;
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    width: fit-content;
+}
+
+.rewards-tab {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: 0.625rem 1.25rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.rewards-tab:hover {
+    color: var(--text-primary);
+}
+
+.rewards-tab.active {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Milestones Grid */
+.milestones-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-md);
+    margin-bottom: var(--space-2xl);
+}
+
+.milestone-card {
+    text-align: center;
+    padding: var(--space-xl);
+    position: relative;
+    overflow: hidden;
+}
+
+.milestone-card.earned {
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.milestone-card.special {
+    border-color: rgba(245, 158, 11, 0.3);
+    background: linear-gradient(145deg, rgba(245, 158, 11, 0.05), rgba(26, 26, 62, 0.6));
+}
+
+.milestone-card-icon {
+    font-size: 2.5rem;
+    margin-bottom: var(--space-md);
+}
+
+.milestone-card h3 {
+    font-size: 1.0625rem;
+    margin-bottom: var(--space-xs);
+}
+
+.milestone-card-desc {
+    font-size: 0.8125rem;
+    margin-bottom: var(--space-md);
+}
+
+.milestone-card-progress {
+    margin-bottom: var(--space-md);
+}
+
+.milestone-progress-label {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    display: block;
+    margin-top: 0.375rem;
+}
+
+.progress-fill.earned {
+    background: linear-gradient(90deg, var(--success-500), var(--success-400));
+}
+
+.milestone-card-reward {
+    margin-top: auto;
+}
+
+.reward-badge {
+    display: inline-flex;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--indigo-300);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.milestone-card.earned .reward-badge {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success-400);
+    border-color: rgba(34, 197, 94, 0.2);
+}
+
+/* Shop Grid */
+.shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--space-md);
+    margin-bottom: var(--space-2xl);
+}
+
+.shop-card {
+    text-align: center;
+    padding: var(--space-xl);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.shop-card-locked {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.shop-card-locked:hover {
+    transform: none;
+    border-color: var(--border-subtle);
+}
+
+.shop-card-icon {
+    font-size: 2.5rem;
+    margin-bottom: var(--space-md);
+}
+
+.shop-card h3 {
+    font-size: 1rem;
+    margin-bottom: var(--space-xs);
+}
+
+.shop-card-desc {
+    font-size: 0.8125rem;
+    margin-bottom: var(--space-md);
+}
+
+.shop-card-price {
+    margin-bottom: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.shop-price-amount {
+    font-size: 1.125rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--warning-400);
+}
+
+.shop-price-need {
+    font-size: 0.6875rem;
+    color: var(--error-400);
+}
+
+/* Earn Info */
+.earn-info {
+    margin-top: var(--space-xl);
+}
+
+.earn-info h3 {
+    margin-bottom: var(--space-lg);
+}
+
+.earn-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-md);
+}
+
+.earn-item {
+    display: flex;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    background: rgba(99, 102, 241, 0.04);
+    border: 1px solid var(--border-subtle);
+}
+
+.earn-item-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.earn-item strong {
+    display: block;
+    font-size: 0.9375rem;
+    margin-bottom: 0.125rem;
+}
+
+.earn-item p {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+
+    .milestones-grid,
+    .shop-grid {
+        grid-template-columns: 1fr;
+    }
+}
