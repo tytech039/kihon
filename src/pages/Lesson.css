@@ -1,0 +1,147 @@
+.lesson-page {
+  padding: var(--space-2xl) 0 var(--space-4xl);
+  min-height: 100vh;
+}
+
+.lesson-loading {
+  text-align: center;
+  padding: var(--space-4xl) 0;
+}
+
+.lesson-loading-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-md);
+  animation: float 3s ease-in-out infinite;
+}
+
+.lesson-loading h2 {
+  margin-bottom: var(--space-sm);
+}
+
+.lesson-loading p {
+  font-size: 1rem;
+}
+
+.lesson-error {
+  text-align: center;
+  padding: var(--space-2xl);
+  margin-top: var(--space-2xl);
+}
+
+.lesson-error p {
+  margin-bottom: var(--space-md);
+}
+
+/* Header */
+.lesson-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+}
+
+.lesson-back {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.lesson-back:hover {
+  color: var(--text-primary);
+}
+
+/* Content */
+.lesson-content {
+  padding: var(--space-2xl) var(--space-2xl);
+  max-width: 720px;
+  margin: 0 auto var(--space-xl);
+}
+
+.lesson-body {
+  font-size: 1.0625rem;
+  line-height: 1.8;
+  color: var(--text-secondary);
+}
+
+.lesson-body h2 {
+  font-size: 1.75rem;
+  margin-top: var(--space-2xl);
+  margin-bottom: var(--space-md);
+  color: var(--text-primary);
+}
+
+.lesson-body h2:first-child {
+  margin-top: 0;
+}
+
+.lesson-body h3 {
+  font-size: 1.25rem;
+  margin-top: var(--space-xl);
+  margin-bottom: var(--space-sm);
+  color: var(--text-primary);
+}
+
+.lesson-body h4 {
+  font-size: 1.0625rem;
+  margin-top: var(--space-lg);
+  margin-bottom: var(--space-sm);
+  color: var(--text-primary);
+}
+
+.lesson-body p {
+  margin-bottom: var(--space-md);
+}
+
+.lesson-body strong {
+  color: var(--text-primary);
+}
+
+.lesson-body li {
+  margin-bottom: var(--space-xs);
+  padding-left: var(--space-sm);
+  list-style-position: inside;
+}
+
+/* Math */
+.math-inline {
+  display: inline;
+  padding: 0.125rem 0.375rem;
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  color: var(--indigo-300);
+  white-space: nowrap;
+}
+
+.math-block {
+  display: block;
+  padding: var(--space-md) var(--space-lg);
+  margin: var(--space-md) 0;
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 1.125rem;
+  color: var(--indigo-200);
+  text-align: center;
+  overflow-x: auto;
+}
+
+/* Actions */
+.lesson-actions {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .lesson-content {
+    padding: var(--space-lg);
+  }
+
+  .lesson-body {
+    font-size: 1rem;
+  }
+}

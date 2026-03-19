@@ -82,12 +82,12 @@ export default function Landing() {
                         </motion.p>
 
                         <motion.div className="hero-actions" custom={3} variants={fadeUp}>
-                            <Link to="/diagnostic" className="btn btn-primary btn-lg">
-                                Start Diagnostic
+                            <Link to="/login" className="btn btn-primary btn-lg">
+                                Get Started
                                 <span className="btn-arrow">→</span>
                             </Link>
-                            <Link to="/dashboard" className="btn btn-secondary btn-lg">
-                                Explore Demo
+                            <Link to="/login" className="btn btn-secondary btn-lg">
+                                Sign In
                             </Link>
                         </motion.div>
 
@@ -191,7 +191,7 @@ export default function Landing() {
                         <div className="cta-kanji">基本</div>
                         <h2>Fundamentals. Basics. Foundation.</h2>
                         <p>Returning to basics isn't a demotion. It's the path forward.</p>
-                        <Link to="/diagnostic" className="btn btn-primary btn-lg">
+                        <Link to="/login" className="btn btn-primary btn-lg">
                             Start Your Diagnostic
                             <span className="btn-arrow">→</span>
                         </Link>

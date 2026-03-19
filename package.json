@@ -1,18 +1,29 @@
 {
   "name": "kihon",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"vite\" \"node --watch server/index.js\"",
+    "dev:client": "vite",
+    "dev:server": "node --watch server/index.js",
     "build": "vite build",
+    "start": "NODE_ENV=production node server/index.js",
+    "seed": "node server/seed.js",
     "preview": "vite preview"
   },
   "dependencies": {
+    "bcrypt": "^5.1.1",
+    "concurrently": "^9.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.21.0",
+    "framer-motion": "^11.15.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.1.0",
-    "framer-motion": "^11.15.0"
+    "react-router-dom": "^7.1.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.0",
