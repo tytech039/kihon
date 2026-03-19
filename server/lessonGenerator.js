@@ -1,7 +1,14 @@
 import { queryOne, query } from './db.js'
 
+function gradeBand(grade) {
+  if (grade <= 3) return { band: 1, label: 'elementary', tone: 'Use simple, friendly language. Short sentences. Concrete examples (apples, money, etc). Encouraging but not babyish.' }
+  if (grade <= 6) return { band: 2, label: 'upper_elementary', tone: 'Use clear, direct language. Mix concrete and abstract examples. Friendly but not patronizing.' }
+  if (grade <= 8) return { band: 3, label: 'middle_school', tone: 'Use efficient, mathematical language. Students can handle abstraction. Skip the hand-holding — be direct and precise.' }
+  return { band: 4, label: 'high_school', tone: 'Be concise and treat the student as an intelligent adult. Use proper mathematical terminology. If this is a foundational skill they are reviewing, acknowledge it is review and get to the point quickly.' }
+}
+
 // Generate a lesson using the Anthropic API
-export async function generateLesson(skill) {
+export async function generateLesson(skill, userGrade) {
   const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
 
   if (!ANTHROPIC_API_KEY || ANTHROPIC_API_KEY === 'sk-ant-...') {
@@ -9,16 +16,23 @@ export async function generateLesson(skill) {
     return createPlaceholderLesson(skill)
   }
 
-  const prompt = `You are an expert math teacher creating a focused lesson for a student at approximately grade ${skill.grade_level} level.
+  const { tone } = gradeBand(userGrade || skill.grade_level)
+  const isReview = userGrade && userGrade > skill.grade_level + 2
 
+  const prompt = `You are an expert math teacher creating a focused lesson.
+
+Student grade level: ${userGrade || skill.grade_level}
 Topic: ${skill.label}
+${isReview ? `Note: This is likely review material for this student — be efficient and skip over-explanation.` : ''}
+
+TONE: ${tone}
 
 IMPORTANT: This lesson must cover ONLY "${skill.label}" and nothing else. Do not introduce unrelated concepts, advanced topics, or tangential material. Stay strictly on topic.
 
-Create a clear, engaging lesson. Follow these rules:
+Create a clear lesson following these rules:
 
-1. Start with a brief, friendly introduction (1-2 sentences)
-2. Explain the core concept of "${skill.label}" in simple terms appropriate for grade ${skill.grade_level}
+1. Start with a brief introduction (1-2 sentences max — no fluff)
+2. Explain the core concept of "${skill.label}" at the appropriate level for grade ${userGrade || skill.grade_level}
 3. Provide 2-3 worked examples with step-by-step solutions — all examples must be about "${skill.label}" only
 4. Use KaTeX math notation:
    - Inline math: $expression$
@@ -26,9 +40,8 @@ Create a clear, engaging lesson. Follow these rules:
    - Fractions: $\\frac{a}{b}$
    - Multiplication: $\\times$, Division: $\\div$
 5. If helpful, include a simple SVG diagram (number line, fraction bar, etc.) as inline SVG
-6. End with a brief summary of the key takeaway
+6. End with a one-sentence key takeaway
 7. Use markdown formatting (headers, bold, etc.)
-8. Keep the tone encouraging — never condescending
 
 Format the entire response as markdown with KaTeX math notation.`
 
@@ -58,23 +71,26 @@ Format the entire response as markdown with KaTeX math notation.`
     const data = await response.json()
     const content = data.content[0]?.text || ''
 
-    // Cache in database
+    const { band } = gradeBand(userGrade || skill.grade_level)
+
+    // Cache in database (difficulty_level stores grade band for cache keying)
     const lesson = await queryOne(
       `INSERT INTO lessons (skill_id, type, title, content, difficulty_level, model_used)
        VALUES ($1, 'ai_generated', $2, $3, $4, $5)
        RETURNING *`,
-      [skill.id, `Learn: ${skill.label}`, content, skill.grade_level, 'claude-sonnet-4-6']
+      [skill.id, `Learn: ${skill.label}`, content, band, 'claude-sonnet-4-6']
     )
 
     return lesson
   } catch (err) {
     console.error('AI lesson generation failed:', err.message)
-    return createPlaceholderLesson(skill)
+    return createPlaceholderLesson(skill, userGrade)
   }
 }
 
-function createPlaceholderLesson(skill) {
+function createPlaceholderLesson(skill, userGrade) {
   const content = getBuiltInContent(skill.id, skill.label, skill.grade_level)
+  const { band } = gradeBand(userGrade || skill.grade_level)
 
   // Don't cache placeholder — let it try AI again next time
   return {
@@ -82,7 +98,7 @@ function createPlaceholderLesson(skill) {
     type: 'placeholder',
     title: `Learn: ${skill.label}`,
     content,
-    difficulty_level: skill.grade_level,
+    difficulty_level: band,
   }
 }
 
