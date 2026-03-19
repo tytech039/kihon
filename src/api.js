@@ -63,7 +63,7 @@ export const api = {
   skillProgress: () => request('/skills/progress'),
 
   // Drill
-  drillStart: () => request('/drill/start', { method: 'POST' }),
+  drillStart: (body = {}) => request('/drill/start', { method: 'POST', body: JSON.stringify(body) }),
   drillAnswer: (body) => request('/drill/answer', { method: 'POST', body: JSON.stringify(body) }),
   drillComplete: (sessionId) => request('/drill/complete', { method: 'POST', body: JSON.stringify({ sessionId }) }),
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { api } from '../api'
 import { useAuth } from '../context/AuthContext'
@@ -9,6 +9,8 @@ const DRILL_DURATION = 7 * 60
 
 export default function Drill() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const pinnedSkillId = searchParams.get('skill') || null
   const { refreshStats } = useAuth()
   const [phase, setPhase] = useState('ready')
   const [sessionId, setSessionId] = useState(null)
@@ -21,6 +23,7 @@ export default function Drill() {
   const [stats, setStats] = useState({ correct: 0, total: 0, streak: 0, maxStreak: 0, credits: 0 })
   const [showStruggle, setShowStruggle] = useState(false)
   const [summary, setSummary] = useState(null)
+  const [pinnedSkillLabel, setPinnedSkillLabel] = useState(null)
   const timerRef = useRef(null)
 
   useEffect(() => {
@@ -54,14 +57,17 @@ export default function Drill() {
 
   const startDrill = useCallback(async () => {
     try {
-      const data = await api.drillStart()
+      const data = await api.drillStart(pinnedSkillId ? { skillId: pinnedSkillId } : {})
       setSessionId(data.sessionId)
       setCurrentQ(data.question)
+      if (data.question?.skill && pinnedSkillId) {
+        setPinnedSkillLabel(pinnedSkillId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))
+      }
       setPhase('drilling')
     } catch (err) {
       console.error('Failed to start drill:', err)
     }
-  }, [])
+  }, [pinnedSkillId])
 
   const handleAnswer = useCallback(async (optionIndex) => {
     if (showFeedback) return
@@ -73,6 +79,7 @@ export default function Drill() {
         sessionId,
         questionId: currentQ.id,
         selectedIndex: optionIndex,
+        pinnedSkillId: pinnedSkillId || undefined,
       })
 
       setLastCorrect(data.correct)
@@ -122,7 +129,11 @@ export default function Drill() {
         <motion.div className="drill-ready" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
           <div className="drill-ready-icon">⚡</div>
           <h1>7 Minute Drill</h1>
-          <p>Fast-paced practice. No narration, no fluff — just math. Questions adapt to your level as you go.</p>
+          {pinnedSkillId ? (
+            <p>Focused practice on <strong>{pinnedSkillId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</strong>. Questions adapt to your level as you go.</p>
+          ) : (
+            <p>Fast-paced practice. No narration, no fluff — just math. Questions adapt to your level as you go.</p>
+          )}
           <div className="drill-ready-stats">
             <div className="drill-ready-stat"><span className="drill-ready-stat-val">7:00</span><span className="drill-ready-stat-label">Duration</span></div>
             <div className="drill-ready-stat"><span className="drill-ready-stat-val">∞</span><span className="drill-ready-stat-label">Questions</span></div>

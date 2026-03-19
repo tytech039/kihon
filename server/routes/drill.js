@@ -4,9 +4,37 @@ import { requireAuth } from '../auth.js'
 
 const router = Router()
 
-// Adaptive question picker for drills — focuses on in-progress skills
-async function pickDrillQuestion(userId, targetDifficulty, answeredIds) {
-  // Fetch edges, mastered skills, and all skills in parallel
+// Adaptive question picker for drills
+// pinnedSkillId: restrict to a single skill (skill-specific drill from a lesson)
+async function pickDrillQuestion(userId, targetDifficulty, answeredIds, pinnedSkillId = null) {
+  const excludeClause = answeredIds.length > 0
+    ? `AND q.id NOT IN (${answeredIds.map((_, i) => `$${i + 3}`).join(', ')})`
+    : ''
+
+  if (pinnedSkillId) {
+    const params = [Math.round(targetDifficulty), pinnedSkillId, ...answeredIds]
+    const rows = await queryAll(
+      `SELECT q.id, q.skill_id, q.difficulty, q.question, q.options
+       FROM questions q
+       WHERE q.skill_id = $2 ${excludeClause}
+       ORDER BY ABS(q.difficulty - $1), RANDOM()
+       LIMIT 3`,
+      params
+    )
+    // If all questions for this skill are exhausted, allow repeats
+    if (rows.length === 0) {
+      const fallback = await queryAll(
+        `SELECT id, skill_id, difficulty, question, options
+         FROM questions WHERE skill_id = $1
+         ORDER BY RANDOM() LIMIT 1`,
+        [pinnedSkillId]
+      )
+      return fallback[0] || null
+    }
+    return rows[Math.floor(Math.random() * rows.length)]
+  }
+
+  // General drill — fetch edges, mastered skills, and all skills in parallel
   const [edges, mastered, allSkills] = await Promise.all([
     queryAll('SELECT from_skill, to_skill FROM skill_edges'),
     queryAll(
@@ -32,11 +60,6 @@ async function pickDrillQuestion(userId, targetDifficulty, answeredIds) {
     })
     .map(s => s.id)
 
-  // Build query — prefer in-progress skills, fall back to all
-  const excludeClause = answeredIds.length > 0
-    ? `AND q.id NOT IN (${answeredIds.map((_, i) => `$${i + 3}`).join(', ')})`
-    : ''
-
   const params = [Math.round(targetDifficulty), inProgressSkills.length > 0 ? inProgressSkills : allSkills.map(s => s.id), ...answeredIds]
 
   const rows = await queryAll(
@@ -49,7 +72,6 @@ async function pickDrillQuestion(userId, targetDifficulty, answeredIds) {
   )
 
   if (rows.length === 0) {
-    // Fall back to any question
     const fallback = await queryAll(
       `SELECT id, skill_id, difficulty, question, options
        FROM questions
@@ -66,6 +88,8 @@ async function pickDrillQuestion(userId, targetDifficulty, answeredIds) {
 // POST /api/drill/start
 router.post('/start', requireAuth, async (req, res) => {
   try {
+    const { skillId } = req.body
+
     const session = await queryOne(
       `INSERT INTO drill_sessions (user_id, current_difficulty)
        VALUES ($1, 4.0)
@@ -73,10 +97,11 @@ router.post('/start', requireAuth, async (req, res) => {
       [req.user.id]
     )
 
-    const question = await pickDrillQuestion(req.user.id, 4.0, [])
+    const question = await pickDrillQuestion(req.user.id, 4.0, [], skillId || null)
 
     res.json({
       sessionId: session.id,
+      pinnedSkillId: skillId || null,
       question: question ? {
         id: question.id,
         skill: question.skill_id,
@@ -94,7 +119,7 @@ router.post('/start', requireAuth, async (req, res) => {
 // POST /api/drill/answer
 router.post('/answer', requireAuth, async (req, res) => {
   try {
-    const { sessionId, questionId, selectedIndex } = req.body
+    const { sessionId, questionId, selectedIndex, pinnedSkillId } = req.body
 
     // Fetch session and question in parallel
     const [session, question] = await Promise.all([
@@ -183,7 +208,7 @@ router.post('/answer', requireAuth, async (req, res) => {
     ])
 
     const answeredIds = answered.map(a => a.question_id)
-    const next = await pickDrillQuestion(req.user.id, pickDifficulty, answeredIds)
+    const next = await pickDrillQuestion(req.user.id, pickDifficulty, answeredIds, pinnedSkillId || null)
 
     res.json({
       correct,

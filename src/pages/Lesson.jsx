@@ -122,7 +122,7 @@ export default function Lesson() {
         </div>
 
         <div className="lesson-actions">
-          <Link to="/drill" className="btn btn-primary btn-lg">
+          <Link to={`/drill?skill=${skillId}`} className="btn btn-primary btn-lg">
             Practice This Skill ⚡
           </Link>
           <Link to="/skills" className="btn btn-secondary">
