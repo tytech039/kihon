@@ -6,12 +6,16 @@ const router = Router()
 
 // Adaptive question picker for drills — focuses on in-progress skills
 async function pickDrillQuestion(userId, targetDifficulty, answeredIds) {
-  // Get in-progress skills (prerequisites mastered, skill not yet mastered)
-  const edges = await queryAll('SELECT from_skill, to_skill FROM skill_edges')
-  const mastered = await queryAll(
-    'SELECT skill_id FROM student_skill_progress WHERE user_id = $1 AND mastered = true',
-    [userId]
-  )
+  // Fetch edges, mastered skills, and all skills in parallel
+  const [edges, mastered, allSkills] = await Promise.all([
+    queryAll('SELECT from_skill, to_skill FROM skill_edges'),
+    queryAll(
+      'SELECT skill_id FROM student_skill_progress WHERE user_id = $1 AND mastered = true',
+      [userId]
+    ),
+    queryAll('SELECT id FROM skills'),
+  ])
+
   const masteredIds = mastered.map(m => m.skill_id)
 
   const prereqMap = {}
@@ -20,7 +24,6 @@ async function pickDrillQuestion(userId, targetDifficulty, answeredIds) {
     prereqMap[e.to_skill].push(e.from_skill)
   }
 
-  const allSkills = await queryAll('SELECT id FROM skills')
   const inProgressSkills = allSkills
     .filter(s => !masteredIds.includes(s.id))
     .filter(s => {
@@ -34,7 +37,7 @@ async function pickDrillQuestion(userId, targetDifficulty, answeredIds) {
     ? `AND q.id NOT IN (${answeredIds.map((_, i) => `$${i + 3}`).join(', ')})`
     : ''
 
-  const params = [targetDifficulty, inProgressSkills.length > 0 ? inProgressSkills : allSkills.map(s => s.id), ...answeredIds]
+  const params = [Math.round(targetDifficulty), inProgressSkills.length > 0 ? inProgressSkills : allSkills.map(s => s.id), ...answeredIds]
 
   const rows = await queryAll(
     `SELECT q.id, q.skill_id, q.difficulty, q.question, q.options
@@ -93,16 +96,15 @@ router.post('/answer', requireAuth, async (req, res) => {
   try {
     const { sessionId, questionId, selectedIndex } = req.body
 
-    const session = await queryOne(
-      'SELECT * FROM drill_sessions WHERE id = $1 AND user_id = $2',
-      [sessionId, req.user.id]
-    )
+    // Fetch session and question in parallel
+    const [session, question] = await Promise.all([
+      queryOne('SELECT * FROM drill_sessions WHERE id = $1 AND user_id = $2', [sessionId, req.user.id]),
+      queryOne('SELECT * FROM questions WHERE id = $1', [questionId]),
+    ])
 
     if (!session || session.status !== 'in_progress') {
       return res.status(400).json({ error: 'Invalid or completed session' })
     }
-
-    const question = await queryOne('SELECT * FROM questions WHERE id = $1', [questionId])
     if (!question) {
       return res.status(400).json({ error: 'Invalid question' })
     }
@@ -111,99 +113,77 @@ router.post('/answer', requireAuth, async (req, res) => {
     const newStreak = correct ? session.streak + 1 : 0
     const creditsAwarded = correct ? (newStreak >= 3 ? 3 : 2) : 0
     const wrongStreak = correct ? 0 : (session.streak <= 0 ? Math.abs(session.streak) + 1 : 1)
-
-    // Record answer
-    await query(
-      `INSERT INTO drill_answers (session_id, question_id, selected_index, correct, credits_awarded)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [sessionId, questionId, selectedIndex, correct, creditsAwarded]
-    )
-
-    // Record credit event
-    if (creditsAwarded > 0) {
-      await query(
-        `INSERT INTO credit_events (user_id, amount, reason, reference_type, reference_id)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [req.user.id, creditsAwarded, `Drill answer (${newStreak >= 3 ? 'streak bonus' : 'correct'})`, 'drill_answer', session.id]
-      )
-    }
-
-    // Adapt difficulty
     const newDifficulty = correct
       ? Math.min(8, session.current_difficulty + 0.4)
       : Math.max(1, session.current_difficulty - 0.6)
-
-    // Update session
     const newCount = session.questions_answered + 1
     const newCorrect = session.correct_count + (correct ? 1 : 0)
 
-    await query(
-      `UPDATE drill_sessions SET
-        current_difficulty = $1,
-        questions_answered = $2,
-        correct_count = $3,
-        streak = $4,
-        max_streak = GREATEST(max_streak, $5),
-        credits_earned = credits_earned + $6
-       WHERE id = $7`,
-      [newDifficulty, newCount, newCorrect, correct ? newStreak : -wrongStreak, newStreak, creditsAwarded, sessionId]
-    )
-
-    // Update skill progress
-    await query(
-      `INSERT INTO student_skill_progress (user_id, skill_id, total_attempts, correct_attempts)
-       VALUES ($1, $2, 1, $3)
-       ON CONFLICT (user_id, skill_id) DO UPDATE SET
-         total_attempts = student_skill_progress.total_attempts + 1,
-         correct_attempts = student_skill_progress.correct_attempts + $3,
-         updated_at = NOW()`,
-      [req.user.id, question.skill_id, correct ? 1 : 0]
-    )
-
-    // Check mastery
-    const progress = await queryOne(
-      'SELECT total_attempts, correct_attempts FROM student_skill_progress WHERE user_id = $1 AND skill_id = $2',
-      [req.user.id, question.skill_id]
-    )
-    let newlyMastered = false
-    if (progress && progress.total_attempts >= 5) {
-      const accuracy = progress.correct_attempts / progress.total_attempts
-      if (accuracy >= 0.8) {
-        const before = await queryOne(
-          'SELECT mastered FROM student_skill_progress WHERE user_id = $1 AND skill_id = $2',
-          [req.user.id, question.skill_id]
-        )
-        if (!before.mastered) {
-          newlyMastered = true
-          await query(
-            'UPDATE student_skill_progress SET mastered = true, mastered_at = NOW() WHERE user_id = $1 AND skill_id = $2',
-            [req.user.id, question.skill_id]
-          )
-          // Mastery bonus credits
-          await query(
+    // Run all writes in parallel; get skill progress back via RETURNING
+    const [, , , progressRow] = await Promise.all([
+      query(
+        `INSERT INTO drill_answers (session_id, question_id, selected_index, correct, credits_awarded)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [sessionId, questionId, selectedIndex, correct, creditsAwarded]
+      ),
+      creditsAwarded > 0
+        ? query(
             `INSERT INTO credit_events (user_id, amount, reason, reference_type, reference_id)
-             VALUES ($1, 10, $2, 'mastery', $3)`,
-            [req.user.id, `Mastered: ${question.skill_id}`, session.id]
+             VALUES ($1, $2, $3, $4, $5)`,
+            [req.user.id, creditsAwarded, `Drill answer (${newStreak >= 3 ? 'streak bonus' : 'correct'})`, 'drill_answer', session.id]
           )
-        }
-      }
-    }
+        : Promise.resolve(),
+      query(
+        `UPDATE drill_sessions SET
+          current_difficulty = $1,
+          questions_answered = $2,
+          correct_count = $3,
+          streak = $4,
+          max_streak = GREATEST(max_streak, $5),
+          credits_earned = credits_earned + $6
+         WHERE id = $7`,
+        [newDifficulty, newCount, newCorrect, correct ? newStreak : -wrongStreak, newStreak, creditsAwarded, sessionId]
+      ),
+      queryOne(
+        `INSERT INTO student_skill_progress (user_id, skill_id, total_attempts, correct_attempts)
+         VALUES ($1, $2, 1, $3)
+         ON CONFLICT (user_id, skill_id) DO UPDATE SET
+           total_attempts = student_skill_progress.total_attempts + 1,
+           correct_attempts = student_skill_progress.correct_attempts + $3,
+           updated_at = NOW()
+         RETURNING total_attempts, correct_attempts, mastered`,
+        [req.user.id, question.skill_id, correct ? 1 : 0]
+      ),
+    ])
 
-    // Struggle detection
+    // Determine mastery, fetch answered IDs in parallel
+    const shouldMaster = progressRow &&
+      progressRow.total_attempts >= 5 &&
+      !progressRow.mastered &&
+      (progressRow.correct_attempts / progressRow.total_attempts) >= 0.8
+
     const triggerStruggle = wrongStreak >= 3
+    const pickDifficulty = triggerStruggle ? Math.max(1, newDifficulty - 2) : newDifficulty
 
-    // Get next question
-    const answered = await queryAll(
-      'SELECT question_id FROM drill_answers WHERE session_id = $1',
-      [sessionId]
-    )
+    const [answered] = await Promise.all([
+      queryAll('SELECT question_id FROM drill_answers WHERE session_id = $1', [sessionId]),
+      shouldMaster
+        ? Promise.all([
+            query(
+              'UPDATE student_skill_progress SET mastered = true, mastered_at = NOW() WHERE user_id = $1 AND skill_id = $2',
+              [req.user.id, question.skill_id]
+            ),
+            query(
+              `INSERT INTO credit_events (user_id, amount, reason, reference_type, reference_id)
+               VALUES ($1, 10, $2, 'mastery', $3)`,
+              [req.user.id, `Mastered: ${question.skill_id}`, session.id]
+            ),
+          ])
+        : Promise.resolve(),
+    ])
+
     const answeredIds = answered.map(a => a.question_id)
-
-    const next = await pickDrillQuestion(
-      req.user.id,
-      triggerStruggle ? Math.max(1, newDifficulty - 2) : newDifficulty,
-      answeredIds
-    )
+    const next = await pickDrillQuestion(req.user.id, pickDifficulty, answeredIds)
 
     res.json({
       correct,
@@ -211,7 +191,7 @@ router.post('/answer', requireAuth, async (req, res) => {
       creditsAwarded,
       streak: correct ? newStreak : 0,
       triggerStruggle,
-      newlyMastered: newlyMastered ? question.skill_id : null,
+      newlyMastered: shouldMaster ? question.skill_id : null,
       nextQuestion: next ? {
         id: next.id,
         skill: next.skill_id,

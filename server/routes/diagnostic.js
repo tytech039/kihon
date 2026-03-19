@@ -12,7 +12,7 @@ async function pickAdaptiveQuestion(targetDifficulty, answeredIds) {
     ? `AND id NOT IN (${answeredIds.map((_, i) => `$${i + 2}`).join(', ')})`
     : ''
 
-  const params = [targetDifficulty, ...answeredIds]
+  const params = [Math.round(targetDifficulty), ...answeredIds]
 
   const rows = await queryAll(
     `SELECT id, skill_id, difficulty, question, options
@@ -65,78 +65,65 @@ router.post('/answer', requireAuth, async (req, res) => {
   try {
     const { sessionId, questionId, selectedIndex } = req.body
 
-    // Get session
-    const session = await queryOne(
-      'SELECT * FROM diagnostic_sessions WHERE id = $1 AND user_id = $2',
-      [sessionId, req.user.id]
-    )
+    // Fetch session and question in parallel
+    const [session, question] = await Promise.all([
+      queryOne('SELECT * FROM diagnostic_sessions WHERE id = $1 AND user_id = $2', [sessionId, req.user.id]),
+      queryOne('SELECT * FROM questions WHERE id = $1', [questionId]),
+    ])
 
     if (!session || session.status !== 'in_progress') {
       return res.status(400).json({ error: 'Invalid or completed session' })
     }
-
-    // Get question with correct answer
-    const question = await queryOne('SELECT * FROM questions WHERE id = $1', [questionId])
     if (!question) {
       return res.status(400).json({ error: 'Invalid question' })
     }
 
     const correct = selectedIndex === question.correct_index
-
-    // Record answer
-    await query(
-      `INSERT INTO diagnostic_answers (session_id, question_id, selected_index, correct)
-       VALUES ($1, $2, $3, $4)`,
-      [sessionId, questionId, selectedIndex, correct]
-    )
-
-    // Update session difficulty
     const newDifficulty = correct
       ? Math.min(8, session.current_difficulty + 0.7)
       : Math.max(1, session.current_difficulty - 1)
-
     const newCount = session.questions_answered + 1
     const newCorrect = session.correct_count + (correct ? 1 : 0)
 
-    await query(
-      `UPDATE diagnostic_sessions
-       SET current_difficulty = $1, questions_answered = $2, correct_count = $3
-       WHERE id = $4`,
-      [newDifficulty, newCount, newCorrect, sessionId]
-    )
-
-    // Update skill progress
-    await query(
-      `INSERT INTO student_skill_progress (user_id, skill_id, total_attempts, correct_attempts)
-       VALUES ($1, $2, 1, $3)
-       ON CONFLICT (user_id, skill_id) DO UPDATE SET
-         total_attempts = student_skill_progress.total_attempts + 1,
-         correct_attempts = student_skill_progress.correct_attempts + $3,
-         updated_at = NOW()`,
-      [req.user.id, question.skill_id, correct ? 1 : 0]
-    )
-
-    // Check if skill should be mastered
-    const progress = await queryOne(
-      'SELECT total_attempts, correct_attempts FROM student_skill_progress WHERE user_id = $1 AND skill_id = $2',
-      [req.user.id, question.skill_id]
-    )
-    if (progress && progress.total_attempts >= 5) {
-      const accuracy = progress.correct_attempts / progress.total_attempts
-      if (accuracy >= 0.8) {
-        await query(
-          'UPDATE student_skill_progress SET mastered = true, mastered_at = NOW() WHERE user_id = $1 AND skill_id = $2',
-          [req.user.id, question.skill_id]
-        )
-      }
-    }
+    // Run all writes in parallel; get skill progress back via RETURNING
+    const [, , progressRow] = await Promise.all([
+      query(
+        `INSERT INTO diagnostic_answers (session_id, question_id, selected_index, correct)
+         VALUES ($1, $2, $3, $4)`,
+        [sessionId, questionId, selectedIndex, correct]
+      ),
+      query(
+        `UPDATE diagnostic_sessions
+         SET current_difficulty = $1, questions_answered = $2, correct_count = $3
+         WHERE id = $4`,
+        [newDifficulty, newCount, newCorrect, sessionId]
+      ),
+      queryOne(
+        `INSERT INTO student_skill_progress (user_id, skill_id, total_attempts, correct_attempts)
+         VALUES ($1, $2, 1, $3)
+         ON CONFLICT (user_id, skill_id) DO UPDATE SET
+           total_attempts = student_skill_progress.total_attempts + 1,
+           correct_attempts = student_skill_progress.correct_attempts + $3,
+           updated_at = NOW()
+         RETURNING total_attempts, correct_attempts, mastered`,
+        [req.user.id, question.skill_id, correct ? 1 : 0]
+      ),
+    ])
 
     // Check if done
     if (newCount >= DIAGNOSTIC_QUESTIONS) {
-      await query(
-        "UPDATE diagnostic_sessions SET status = 'completed', completed_at = NOW() WHERE id = $1",
-        [sessionId]
-      )
+      // Mastery check + session completion in parallel
+      const shouldMaster = progressRow &&
+        progressRow.total_attempts >= 5 &&
+        !progressRow.mastered &&
+        (progressRow.correct_attempts / progressRow.total_attempts) >= 0.8
+
+      await Promise.all([
+        query("UPDATE diagnostic_sessions SET status = 'completed', completed_at = NOW() WHERE id = $1", [sessionId]),
+        shouldMaster
+          ? query('UPDATE student_skill_progress SET mastered = true, mastered_at = NOW() WHERE user_id = $1 AND skill_id = $2', [req.user.id, question.skill_id])
+          : Promise.resolve(),
+      ])
 
       return res.json({
         correct,
@@ -151,13 +138,20 @@ router.post('/answer', requireAuth, async (req, res) => {
       })
     }
 
-    // Pick next question
-    const answered = await queryAll(
-      'SELECT question_id FROM diagnostic_answers WHERE session_id = $1',
-      [sessionId]
-    )
-    const answeredIds = answered.map(a => a.question_id)
+    // Mastery check + answered IDs fetch in parallel
+    const shouldMaster = progressRow &&
+      progressRow.total_attempts >= 5 &&
+      !progressRow.mastered &&
+      (progressRow.correct_attempts / progressRow.total_attempts) >= 0.8
 
+    const [answered] = await Promise.all([
+      queryAll('SELECT question_id FROM diagnostic_answers WHERE session_id = $1', [sessionId]),
+      shouldMaster
+        ? query('UPDATE student_skill_progress SET mastered = true, mastered_at = NOW() WHERE user_id = $1 AND skill_id = $2', [req.user.id, question.skill_id])
+        : Promise.resolve(),
+    ])
+
+    const answeredIds = answered.map(a => a.question_id)
     const next = await pickAdaptiveQuestion(newDifficulty, answeredIds)
 
     res.json({

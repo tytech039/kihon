@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { api } from '../api'
@@ -19,6 +19,8 @@ export default function Diagnostic() {
   const [lastCorrect, setLastCorrect] = useState(null)
   const [lastExplanation, setLastExplanation] = useState('')
   const [results, setResults] = useState({ correct: 0, total: 0, gaps: [] })
+  const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
 
   const startQuiz = useCallback(async () => {
     try {
@@ -34,7 +36,9 @@ export default function Diagnostic() {
   }, [])
 
   const handleAnswer = useCallback(async (optionIndex) => {
-    if (showFeedback) return
+    if (submittingRef.current) return
+    submittingRef.current = true
+    setSubmitting(true)
     setSelected(optionIndex)
     setShowFeedback(true)
 
@@ -49,7 +53,6 @@ export default function Diagnostic() {
       setLastExplanation(data.explanation)
 
       if (data.done) {
-        // Update results
         setResults({
           correct: data.results.correct,
           total: data.results.total,
@@ -58,7 +61,6 @@ export default function Diagnostic() {
         })
 
         setTimeout(async () => {
-          // Fetch gap data
           try {
             const gapData = await api.diagnosticResults(data.results.sessionId)
             setResults(prev => ({ ...prev, gaps: gapData.gaps }))
@@ -74,14 +76,18 @@ export default function Diagnostic() {
           setQuestionNum(data.questionNumber)
           setSelected(null)
           setShowFeedback(false)
+          setSubmitting(false)
+          submittingRef.current = false
         }, 1500)
       }
     } catch (err) {
       console.error('Failed to submit answer:', err)
       setShowFeedback(false)
       setSelected(null)
+      setSubmitting(false)
+      submittingRef.current = false
     }
-  }, [showFeedback, currentQ, sessionId, refreshStats])
+  }, [currentQ, sessionId, refreshStats])
 
   // --- Intro Phase ---
   if (phase === 'intro') {
@@ -267,8 +273,9 @@ export default function Diagnostic() {
                       key={i}
                       className={className}
                       onClick={() => handleAnswer(i)}
-                      whileHover={!showFeedback ? { scale: 1.02 } : {}}
-                      whileTap={!showFeedback ? { scale: 0.98 } : {}}
+                      disabled={submitting}
+                      whileHover={!submitting ? { scale: 1.02 } : {}}
+                      whileTap={!submitting ? { scale: 0.98 } : {}}
                     >
                       <span className="option-letter">
                         {String.fromCharCode(65 + i)}
