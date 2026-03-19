@@ -9,15 +9,17 @@ export async function generateLesson(skill) {
     return createPlaceholderLesson(skill)
   }
 
-  const prompt = `You are an expert math teacher creating a lesson for a student at approximately grade ${skill.grade_level} level.
+  const prompt = `You are an expert math teacher creating a focused lesson for a student at approximately grade ${skill.grade_level} level.
 
 Topic: ${skill.label}
 
-Create a clear, engaging lesson that teaches this concept. Follow these rules:
+IMPORTANT: This lesson must cover ONLY "${skill.label}" and nothing else. Do not introduce unrelated concepts, advanced topics, or tangential material. Stay strictly on topic.
+
+Create a clear, engaging lesson. Follow these rules:
 
 1. Start with a brief, friendly introduction (1-2 sentences)
-2. Explain the core concept in simple terms
-3. Provide 2-3 worked examples with step-by-step solutions
+2. Explain the core concept of "${skill.label}" in simple terms appropriate for grade ${skill.grade_level}
+3. Provide 2-3 worked examples with step-by-step solutions — all examples must be about "${skill.label}" only
 4. Use KaTeX math notation:
    - Inline math: $expression$
    - Block math: $$expression$$
